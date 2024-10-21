@@ -18,8 +18,10 @@ use objc2_foundation::{
 
 use csscolorparser::Color;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
+use crate::window::create_event_loop;
 use crate::{
     bridge::{send_ui, ParallelCommand},
     settings::Settings,
@@ -384,6 +386,12 @@ impl Menu {
             about_item.setAction(Some(sel!(orderFrontStandardAboutPanel:)));
             app_menu.addItem(&about_item);
 
+            let new_window = NSMenuItem::new(mtm);
+            new_window.setTitle(ns_string!("New Window"));
+            new_window.setAction(Some(sel!(neovideCreateWindow:)));
+            new_window.setKeyEquivalent(ns_string!("n"));
+            app_menu.addItem(&new_window);
+
             let services_item = NSMenuItem::new(mtm);
             let services_menu = NSMenu::new(mtm);
             services_item.setTitle(ns_string!("Services"));
@@ -492,6 +500,17 @@ pub fn register_file_handler() {
         });
     }
 
+    // unsafe extern "C" fn new_window(
+    //     _this: &mut AnyObject,
+    //     _sel: objc2::runtime::Sel,
+    //     _sender: &objc2::runtime::AnyObject,
+    // ) {
+    //     println!("new window");
+    //     // ActiveEventLoop::create_window();
+    //     // Retrieve the event loop and settings
+    //     // let event_loop = create_event_loop();
+    // }
+
     let mtm = MainThreadMarker::new().expect("File handler must be registered on main thread.");
 
     unsafe {
@@ -507,6 +526,10 @@ pub fn register_file_handler() {
             sel!(application:openFiles:),
             handle_open_files as unsafe extern "C" fn(_, _, _, _) -> _,
         );
+        // my_class.add_method(
+        //     sel!(newWindow:),
+        //     new_window as unsafe extern "C" fn(_, _, _) -> _,
+        // );
         let class = my_class.register();
 
         // this should be safe as:

@@ -1,9 +1,9 @@
 use std::{
     convert::TryInto,
-    env,
-    env::consts::OS,
+    env::{self, consts::OS},
     ffi::{c_void, CStr, CString},
     num::NonZeroU32,
+    rc::Rc,
     sync::Arc,
 };
 
@@ -54,7 +54,7 @@ pub struct OpenGLSkiaRenderer {
     context: PossiblyCurrentContext,
     window_surface: Surface<WindowSurface>,
     config: Config,
-    window: Option<Window>,
+    window: Option<Rc<Window>>,
 
     settings: Arc<Settings>,
 }
@@ -261,7 +261,10 @@ pub fn build_window(
         .expect("Failed to create Window");
     let window = window.expect("Could not create Window");
     let config = WindowConfigType::OpenGL(config);
-    WindowConfig { window, config }
+    WindowConfig {
+        window: window.into(),
+        config,
+    }
 }
 
 fn create_surface(

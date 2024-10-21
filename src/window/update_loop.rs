@@ -5,7 +5,7 @@ use std::{
 
 use winit::{
     application::ApplicationHandler,
-    event::WindowEvent,
+    event::{StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
 };
 
@@ -170,10 +170,10 @@ impl UpdateLoop {
     fn schedule_next_event(&mut self, event_loop: &ActiveEventLoop) {
         #[cfg(feature = "profiling")]
         self.should_render.plot_tracy();
-        if self.create_window_allowed {
-            self.window_wrapper
-                .try_create_window(event_loop, &self.proxy);
-        }
+        // if self.create_window_allowed {
+        //     self.window_wrapper
+        //         .try_create_window(event_loop, &self.proxy);
+        // }
         event_loop.set_control_flow(ControlFlow::WaitUntil(self.get_event_deadline()));
     }
 
@@ -325,6 +325,32 @@ impl UpdateLoop {
 }
 
 impl ApplicationHandler<UserEvent> for UpdateLoop {
+    fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
+        tracy_zone!("new_events");
+        match cause {
+            StartCause::Init => {
+                self.create_window_allowed = true;
+                self.window_wrapper
+                    .try_create_window(event_loop, &self.proxy.clone());
+            }
+            StartCause::ResumeTimeReached { .. } => {
+                self.create_window_allowed = false;
+            }
+            StartCause::WaitCancelled { .. } => {
+                self.create_window_allowed = false;
+            }
+            StartCause::Poll => {
+                self.create_window_allowed = false;
+            }
+            StartCause::CreateWindow => {
+                self.create_window_allowed = true;
+                self.window_wrapper
+                    .try_create_window(event_loop, &self.proxy.clone());
+            }
+        }
+        self.schedule_next_event(event_loop);
+    }
+
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,

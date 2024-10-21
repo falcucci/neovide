@@ -1,12 +1,13 @@
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 use log::trace;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use rustc_hash::FxHashMap;
 use winit::{
     dpi,
     event::{Ime, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoopProxy},
-    window::{Fullscreen, Theme},
+    window::{Fullscreen, Theme, Window, WindowId},
 };
 
 use super::{
@@ -77,6 +78,7 @@ pub struct WinitWindowWrapper {
     initial_window_size: WindowSize,
     is_minimized: bool,
     ime_enabled: bool,
+    pub routes: FxHashMap<WindowId, Rc<Window>>,
     ime_area: (dpi::PhysicalPosition<u32>, dpi::PhysicalSize<u32>),
     pub vsync: Option<VSync>,
     #[cfg(target_os = "macos")]
@@ -96,6 +98,7 @@ impl WinitWindowWrapper {
 
         Self {
             skia_renderer: None,
+            routes: FxHashMap::default(),
             renderer,
             keyboard_manager: KeyboardManager::new(settings.clone()),
             mouse_manager: MouseManager::new(settings.clone()),
@@ -440,15 +443,15 @@ impl WinitWindowWrapper {
         event_loop: &ActiveEventLoop,
         proxy: &EventLoopProxy<UserEvent>,
     ) {
-        if self.ui_state != UIState::WaitingForWindowCreate {
-            return;
-        }
+        // if self.ui_state != UIState::WaitingForWindowCreate {
+        //     return;
+        // }
         tracy_zone!("create_window");
 
         let maximized = matches!(self.initial_window_size, WindowSize::Maximized);
 
         let window_config = create_window(event_loop, maximized, &self.title, &self.settings);
-        let window = &window_config.window;
+        let window = Rc::new(window_config.window.clone());
 
         let WindowSettings {
             input_ime,
@@ -462,12 +465,13 @@ impl WinitWindowWrapper {
         } = self.settings.get::<WindowSettings>();
 
         window.set_ime_allowed(input_ime);
+        self.routes.insert(window.id(), Rc::clone(&window));
 
         // It's important that this is created before the window is resized, since it can change the padding and affect the size
         #[cfg(target_os = "macos")]
         {
             self.macos_feature = Some(MacosWindowFeature::from_winit_window(
-                window,
+                &window,
                 self.settings.clone(),
             ));
         }
@@ -534,7 +538,7 @@ impl WinitWindowWrapper {
         let srgb = cmd_line_settings.srgb;
         let vsync_enabled = cmd_line_settings.vsync;
         let skia_renderer =
-            create_skia_renderer(window_config, srgb, vsync_enabled, self.settings.clone());
+            create_skia_renderer(&window_config, srgb, vsync_enabled, self.settings.clone());
         let window = skia_renderer.window();
 
         self.saved_inner_size = window.inner_size();

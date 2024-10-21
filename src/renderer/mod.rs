@@ -14,6 +14,7 @@ pub mod d3d;
 use std::{
     cmp::Ordering,
     collections::{hash_map::Entry, HashMap},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -500,14 +501,16 @@ fn floating_sort(window_a: &&mut RenderedWindow, window_b: &&mut RenderedWindow)
     orda.cmp(ordb)
 }
 
+#[derive(Clone)]
 pub enum WindowConfigType {
     OpenGL(glutin::config::Config),
     #[cfg(target_os = "windows")]
     Direct3D,
 }
 
+#[derive(Clone)]
 pub struct WindowConfig {
-    pub window: Window,
+    pub window: Rc<Window>,
     pub config: WindowConfigType,
 }
 
@@ -548,14 +551,14 @@ pub trait SkiaRenderer {
 }
 
 pub fn create_skia_renderer(
-    window: WindowConfig,
+    window: &WindowConfig,
     srgb: bool,
     vsync: bool,
     settings: Arc<Settings>,
 ) -> Box<dyn SkiaRenderer> {
     let renderer: Box<dyn SkiaRenderer> = match &window.config {
         WindowConfigType::OpenGL(..) => Box::new(opengl::OpenGLSkiaRenderer::new(
-            window,
+            window.clone(),
             srgb,
             vsync,
             settings.clone(),
