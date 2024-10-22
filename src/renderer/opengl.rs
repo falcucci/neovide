@@ -161,8 +161,8 @@ impl OpenGLSkiaRenderer {
 }
 
 impl SkiaRenderer for OpenGLSkiaRenderer {
-    fn window(&self) -> &Window {
-        self.window.as_ref().unwrap()
+    fn window(&self) -> Rc<Window> {
+        Rc::clone(self.window.as_ref().unwrap())
     }
 
     fn flush(&mut self) {
@@ -212,7 +212,7 @@ impl SkiaRenderer for OpenGLSkiaRenderer {
 
         #[cfg(target_os = "macos")]
         {
-            VSync::MacosDisplayLink(VSyncMacosDisplayLink::new(self.window(), proxy))
+            VSync::MacosDisplayLink(VSyncMacosDisplayLink::new(self.window().as_ref(), proxy))
         }
     }
 

@@ -540,7 +540,7 @@ pub fn build_window_config(
 }
 
 pub trait SkiaRenderer {
-    fn window(&self) -> &Window;
+    fn window(&self) -> Rc<Window>;
     fn flush(&mut self);
     fn swap_buffers(&mut self);
     fn canvas(&mut self) -> &Canvas;

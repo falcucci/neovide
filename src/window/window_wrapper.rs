@@ -313,7 +313,7 @@ impl WinitWindowWrapper {
             &event,
             &self.keyboard_manager,
             &self.renderer,
-            skia_renderer.window(),
+            skia_renderer.window().as_ref(),
         );
         self.keyboard_manager.handle_event(&event);
         self.renderer.handle_event(&event);
@@ -359,7 +359,7 @@ impl WinitWindowWrapper {
             }
             WindowEvent::Moved(_) => {
                 tracy_zone!("Moved");
-                vsync.update(skia_renderer.window());
+                vsync.update(skia_renderer.window().as_ref());
             }
             WindowEvent::Ime(Ime::Enabled) => {
                 log::info!("Ime enabled");
@@ -465,7 +465,6 @@ impl WinitWindowWrapper {
         } = self.settings.get::<WindowSettings>();
 
         window.set_ime_allowed(input_ime);
-        self.routes.insert(window.id(), Rc::clone(&window));
 
         // It's important that this is created before the window is resized, since it can change the padding and affect the size
         #[cfg(target_os = "macos")]
@@ -540,6 +539,8 @@ impl WinitWindowWrapper {
         let skia_renderer =
             create_skia_renderer(&window_config, srgb, vsync_enabled, self.settings.clone());
         let window = skia_renderer.window();
+        // Wrap the window in an Rc
+        // let window_rc = Rc::new(window);
 
         self.saved_inner_size = window.inner_size();
 
@@ -578,6 +579,7 @@ impl WinitWindowWrapper {
             window.request_redraw();
         }
 
+        self.routes.insert(window.id(), Rc::clone(&window));
         self.ui_state = UIState::FirstFrame;
         self.skia_renderer = Some(skia_renderer);
         #[cfg(target_os = "macos")]

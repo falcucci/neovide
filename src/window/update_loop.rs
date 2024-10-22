@@ -174,7 +174,7 @@ impl UpdateLoop {
         //     self.window_wrapper
         //         .try_create_window(event_loop, &self.proxy);
         // }
-        event_loop.set_control_flow(ControlFlow::WaitUntil(self.get_event_deadline()));
+        // event_loop.set_control_flow(ControlFlow::WaitUntil(self.get_event_deadline()));
     }
 
     fn animate(&mut self) {
@@ -184,8 +184,9 @@ impl UpdateLoop {
         let skia_renderer = self.window_wrapper.skia_renderer.as_ref().unwrap();
         let vsync = self.window_wrapper.vsync.as_ref().unwrap();
 
-        let dt =
-            Duration::from_secs_f32(vsync.get_refresh_rate(skia_renderer.window(), &self.settings));
+        let dt = Duration::from_secs_f32(
+            vsync.get_refresh_rate(skia_renderer.window().as_ref(), &self.settings),
+        );
 
         let now = Instant::now();
         let target_animation_time = now - self.animation_start;
@@ -266,7 +267,7 @@ impl UpdateLoop {
             // When winit throttling is used, request a redraw and wait for the render event
             // Otherwise render immediately
             if vsync.uses_winit_throttling() {
-                vsync.request_redraw(skia_renderer.window());
+                vsync.request_redraw(skia_renderer.window().as_ref());
                 self.pending_render = true;
                 tracy_plot!("pending_render", self.pending_render as u8 as f64);
             } else {
@@ -332,6 +333,8 @@ impl ApplicationHandler<UserEvent> for UpdateLoop {
                 self.create_window_allowed = true;
                 self.window_wrapper
                     .try_create_window(event_loop, &self.proxy.clone());
+                let routes = self.window_wrapper.routes.clone();
+                println!("{:?}", routes);
             }
             StartCause::ResumeTimeReached { .. } => {
                 self.create_window_allowed = false;
@@ -346,6 +349,8 @@ impl ApplicationHandler<UserEvent> for UpdateLoop {
                 self.create_window_allowed = true;
                 self.window_wrapper
                     .try_create_window(event_loop, &self.proxy.clone());
+                let routes = self.window_wrapper.routes.clone();
+                println!("{:?}", routes);
             }
         }
         self.schedule_next_event(event_loop);
