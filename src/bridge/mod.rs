@@ -19,11 +19,15 @@ use tokio::{
     select,
     time::timeout,
 };
-use winit::event_loop::EventLoopProxy;
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 use crate::{
-    cmd_line::CmdLineSettings, editor::start_editor, running_tracker::RunningTracker, settings::*,
-    units::GridSize, window::UserEvent,
+    cmd_line::CmdLineSettings,
+    editor::start_editor,
+    running_tracker::RunningTracker,
+    settings::*,
+    units::GridSize,
+    window::{EventPayload, UserEvent},
 };
 pub use handler::NeovimHandler;
 use session::{NeovimInstance, NeovimSession};
@@ -136,7 +140,7 @@ async fn launch(
     res.map(|()| session)
 }
 
-async fn run(session: NeovimSession, proxy: EventLoopProxy<UserEvent>) {
+async fn run(session: NeovimSession, proxy: EventLoopProxy<EventPayload>) {
     let mut session = session;
 
     if let Some(process) = session.neovim_process.as_mut() {
@@ -164,7 +168,12 @@ async fn run(session: NeovimSession, proxy: EventLoopProxy<UserEvent>) {
         session.io_handle.await.ok();
     }
     log::info!("Neovim has quit");
-    proxy.send_event(UserEvent::NeovimExited).ok();
+    proxy
+        .send_event(EventPayload::from(EventPayload::new(
+            UserEvent::NeovimExited,
+            WindowId::from(0),
+        )))
+        .ok();
 }
 
 impl NeovimRuntime {
@@ -176,7 +185,7 @@ impl NeovimRuntime {
 
     pub fn launch(
         &mut self,
-        event_loop_proxy: EventLoopProxy<UserEvent>,
+        event_loop_proxy: EventLoopProxy<EventPayload>,
         grid_size: Option<GridSize<u32>>,
         running_tracker: RunningTracker,
         settings: Arc<Settings>,

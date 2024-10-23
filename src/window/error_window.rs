@@ -28,6 +28,8 @@ use crate::{
     window::{load_icon, UserEvent},
 };
 
+use super::EventPayload;
+
 const TEXT_COLOR: Color4f = WHITE;
 const BACKGROUND_COLOR: Color4f = BLACK;
 const FONT_SIZE: f32 = 12.0 * 96.0 / 72.0;
@@ -36,7 +38,11 @@ const MAX_LINES: i32 = 9999;
 const MIN_SIZE: PhysicalSize<u32> = PhysicalSize::new(500, 500);
 const DEFAULT_SIZE: PhysicalSize<u32> = PhysicalSize::new(800, 600);
 
-pub fn show_error_window(message: &str, event_loop: EventLoop<UserEvent>, settings: Arc<Settings>) {
+pub fn show_error_window(
+    message: &str,
+    event_loop: EventLoop<EventPayload>,
+    settings: Arc<Settings>,
+) {
     let mut error_window = ErrorWindow::new(message, settings);
     event_loop.run_app(&mut error_window).ok();
 }
@@ -91,7 +97,7 @@ impl<'a> ErrorWindow<'a> {
     }
 }
 
-impl<'a> ApplicationHandler<UserEvent> for ErrorWindow<'a> {
+impl<'a> ApplicationHandler<EventPayload> for ErrorWindow<'a> {
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,

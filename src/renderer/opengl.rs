@@ -40,7 +40,11 @@ pub use super::vsync::VSyncMacosDisplayLink;
 
 use super::{RendererSettings, SkiaRenderer, VSync, WindowConfig, WindowConfigType};
 
-use crate::{profiling::tracy_gpu_zone, settings::Settings, window::UserEvent};
+use crate::{
+    profiling::tracy_gpu_zone,
+    settings::Settings,
+    window::{EventPayload, UserEvent},
+};
 
 #[cfg(feature = "gpu_profiling")]
 use crate::profiling::{opengl::create_opengl_gpu_context, GpuCtx};
@@ -197,7 +201,7 @@ impl SkiaRenderer for OpenGLSkiaRenderer {
     }
 
     #[allow(unused_variables)]
-    fn create_vsync(&self, proxy: EventLoopProxy<UserEvent>) -> VSync {
+    fn create_vsync(&self, proxy: EventLoopProxy<EventPayload>) -> VSync {
         #[cfg(target_os = "linux")]
         if env::var("WAYLAND_DISPLAY").is_ok() {
             VSync::WinitThrottling()

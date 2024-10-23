@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    window::WindowId,
+};
 
 use crate::{
     settings::Settings, units::GridSize, window::WindowSettings, window::WinitWindowWrapper,
@@ -68,10 +71,13 @@ pub fn load_last_window_settings() -> Result<PersistentWindowSettings, String> {
 }
 
 pub fn save_window_size(window_wrapper: &WinitWindowWrapper, settings: &Settings) {
-    if window_wrapper.skia_renderer.is_none() {
+    if window_wrapper.routes.is_empty() {
         return;
     }
-    let window = window_wrapper.skia_renderer.as_ref().unwrap().window();
+
+    let skia_renderer = window_wrapper.routes.get(&WindowId::from(0)).unwrap();
+    let window = skia_renderer.borrow_mut().window();
+    // let window = window_wrapper.skia_renderer.as_ref().unwrap().window();
     // Don't save the window size when the window is minimized, since the size can be 0
     // Note wayland can't determine this
     if window.is_minimized() == Some(true) {

@@ -13,8 +13,9 @@ use std::env;
 
 use winit::{
     dpi::{PhysicalSize, Size},
+    event::Event,
     event_loop::{ActiveEventLoop, EventLoop},
-    window::{Cursor, Icon, Theme, Window},
+    window::{Cursor, Icon, Theme, Window, WindowId},
 };
 
 #[cfg(target_os = "macos")]
@@ -93,6 +94,24 @@ pub enum UserEvent {
     NeovimExited,
 }
 
+#[derive(Debug, Clone)]
+pub struct EventPayload {
+    pub payload: UserEvent,
+    pub window_id: WindowId,
+}
+
+impl EventPayload {
+    pub fn new(payload: UserEvent, window_id: WindowId) -> Self {
+        Self { payload, window_id }
+    }
+}
+
+impl From<EventPayload> for Event<EventPayload> {
+    fn from(value: EventPayload) -> Self {
+        Event::UserEvent(value)
+    }
+}
+
 impl From<Vec<DrawCommand>> for UserEvent {
     fn from(value: Vec<DrawCommand>) -> Self {
         UserEvent::DrawCommandBatch(value)
@@ -117,7 +136,7 @@ impl From<HotReloadConfigs> for UserEvent {
     }
 }
 
-pub fn create_event_loop() -> EventLoop<UserEvent> {
+pub fn create_event_loop() -> EventLoop<EventPayload> {
     let mut builder = EventLoop::with_user_event();
     // #[cfg(target_os = "macos")]
     // builder.with_default_menu(false);

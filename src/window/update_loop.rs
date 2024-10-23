@@ -7,9 +7,12 @@ use winit::{
     application::ApplicationHandler,
     event::{StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
+    window::WindowId,
 };
 
-use super::{save_window_size, CmdLineSettings, UserEvent, WindowSettings, WinitWindowWrapper};
+use super::{
+    save_window_size, CmdLineSettings, EventPayload, UserEvent, WindowSettings, WinitWindowWrapper,
+};
 use crate::{
     profiling::{tracy_plot, tracy_zone},
     renderer::DrawCommand,
@@ -88,7 +91,7 @@ pub struct UpdateLoop {
 
     window_wrapper: WinitWindowWrapper,
     create_window_allowed: bool,
-    proxy: EventLoopProxy<UserEvent>,
+    proxy: EventLoopProxy<EventPayload>,
 
     settings: Arc<Settings>,
 }
@@ -97,7 +100,7 @@ impl UpdateLoop {
     pub fn new(
         initial_window_size: WindowSize,
         initial_font_settings: Option<FontSettings>,
-        proxy: EventLoopProxy<UserEvent>,
+        proxy: EventLoopProxy<EventPayload>,
         settings: Arc<Settings>,
     ) -> Self {
         let previous_frame_start = Instant::now();
@@ -178,15 +181,16 @@ impl UpdateLoop {
     }
 
     fn animate(&mut self) {
-        if self.window_wrapper.skia_renderer.is_none() {
+        if self.window_wrapper.routes.is_empty() {
             return;
         }
-        let skia_renderer = self.window_wrapper.skia_renderer.as_ref().unwrap();
+
+        let window_id = *self.window_wrapper.routes.keys().next().unwrap();
+        let skia_renderer = self.window_wrapper.routes.get(&window_id).unwrap();
+        let window = skia_renderer.borrow_mut().window();
         let vsync = self.window_wrapper.vsync.as_ref().unwrap();
 
-        let dt = Duration::from_secs_f32(
-            vsync.get_refresh_rate(skia_renderer.window().as_ref(), &self.settings),
-        );
+        let dt = Duration::from_secs_f32(vsync.get_refresh_rate(window.as_ref(), &self.settings));
 
         let now = Instant::now();
         let target_animation_time = now - self.animation_start;
@@ -254,10 +258,13 @@ impl UpdateLoop {
     }
 
     fn schedule_render(&mut self, skipped_frame: bool) {
-        if self.window_wrapper.skia_renderer.is_none() {
+        if self.window_wrapper.routes.is_empty() {
             return;
         }
-        let skia_renderer = self.window_wrapper.skia_renderer.as_ref().unwrap();
+        let window_id = *self.window_wrapper.routes.keys().next().unwrap();
+        println!("{:?}", window_id);
+        let skia_renderer = self.window_wrapper.routes.get(&window_id).unwrap();
+        let window = skia_renderer.borrow_mut().window();
         let vsync = self.window_wrapper.vsync.as_mut().unwrap();
 
         // There's really no point in trying to render if the frame is skipped
@@ -267,7 +274,7 @@ impl UpdateLoop {
             // When winit throttling is used, request a redraw and wait for the render event
             // Otherwise render immediately
             if vsync.uses_winit_throttling() {
-                vsync.request_redraw(skia_renderer.window().as_ref());
+                vsync.request_redraw(window.as_ref());
                 self.pending_render = true;
                 tracy_plot!("pending_render", self.pending_render as u8 as f64);
             } else {
@@ -290,8 +297,8 @@ impl UpdateLoop {
             return;
         }
 
-        let res = self.window_wrapper.prepare_frame();
-        self.should_render.update(res);
+        // let res = self.window_wrapper.prepare_frame();
+        // self.should_render.update(res);
 
         let should_animate =
             self.should_render == ShouldRender::Immediately || !self.idle || skipped_frame;
@@ -325,7 +332,7 @@ impl UpdateLoop {
     }
 }
 
-impl ApplicationHandler<UserEvent> for UpdateLoop {
+impl ApplicationHandler<EventPayload> for UpdateLoop {
     fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
         tracy_zone!("new_events");
         match cause {
@@ -334,7 +341,7 @@ impl ApplicationHandler<UserEvent> for UpdateLoop {
                 self.window_wrapper
                     .try_create_window(event_loop, &self.proxy.clone());
                 let routes = self.window_wrapper.routes.clone();
-                println!("{:?}", routes);
+                // println!("{:?}", routes);
             }
             StartCause::ResumeTimeReached { .. } => {
                 self.create_window_allowed = false;
@@ -350,7 +357,7 @@ impl ApplicationHandler<UserEvent> for UpdateLoop {
                 self.window_wrapper
                     .try_create_window(event_loop, &self.proxy.clone());
                 let routes = self.window_wrapper.routes.clone();
-                println!("{:?}", routes);
+                // println!("{:?}", routes);
             }
         }
         self.schedule_next_event(event_loop);
@@ -359,7 +366,7 @@ impl ApplicationHandler<UserEvent> for UpdateLoop {
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
-        _window_id: winit::window::WindowId,
+        window_id: winit::window::WindowId,
         event: winit::event::WindowEvent,
     ) {
         tracy_zone!("window_event");
@@ -383,14 +390,16 @@ impl ApplicationHandler<UserEvent> for UpdateLoop {
             _ => {}
         }
 
-        if self.window_wrapper.handle_window_event(event) {
+        if self.window_wrapper.handle_window_event(event, window_id) {
             self.should_render = ShouldRender::Immediately;
         }
         self.schedule_next_event(event_loop);
     }
 
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: UserEvent) {
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: EventPayload) {
         tracy_zone!("user_event");
+        let window_id = event.window_id;
+        let event = event.payload;
         match event {
             UserEvent::NeovimExited => {
                 save_window_size(&self.window_wrapper, &self.settings);

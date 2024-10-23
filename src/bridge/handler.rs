@@ -5,22 +5,25 @@ use log::trace;
 use nvim_rs::{Handler, Neovim};
 use rmpv::Value;
 use tokio::sync::mpsc::UnboundedSender;
-use winit::event_loop::EventLoopProxy;
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 use crate::{
-    bridge::clipboard::{get_clipboard_contents, set_clipboard_contents},
-    bridge::{events::parse_redraw_event, NeovimWriter, RedrawEvent},
+    bridge::{
+        clipboard::{get_clipboard_contents, set_clipboard_contents},
+        events::parse_redraw_event,
+        NeovimWriter, RedrawEvent,
+    },
     error_handling::ResultPanicExplanation,
     running_tracker::RunningTracker,
     settings::Settings,
-    window::{UserEvent, WindowCommand},
+    window::{EventPayload, UserEvent, WindowCommand},
     LoggingSender,
 };
 
 #[derive(Clone)]
 pub struct NeovimHandler {
     // The EventLoopProxy is not sync on all platforms, so wrap it in a mutex
-    proxy: Arc<Mutex<EventLoopProxy<UserEvent>>>,
+    proxy: Arc<Mutex<EventLoopProxy<EventPayload>>>,
     sender: LoggingSender<RedrawEvent>,
     running_tracker: RunningTracker,
     #[allow(dead_code)]
@@ -30,7 +33,7 @@ pub struct NeovimHandler {
 impl NeovimHandler {
     pub fn new(
         sender: UnboundedSender<RedrawEvent>,
-        proxy: EventLoopProxy<UserEvent>,
+        proxy: EventLoopProxy<EventPayload>,
         running_tracker: RunningTracker,
         settings: Arc<Settings>,
     ) -> Self {
@@ -128,11 +131,10 @@ impl Handler for NeovimHandler {
                     .send_event(WindowCommand::UnregisterRightClick.into());
             }
             "neovide.focus_window" => {
-                let _ = self
-                    .proxy
-                    .lock()
-                    .unwrap()
-                    .send_event(WindowCommand::FocusWindow.into());
+                let _ = self.proxy.lock().unwrap().send_event(EventPayload::new(
+                    UserEvent::WindowCommand(WindowCommand::FocusWindow),
+                    WindowId::from(0),
+                ));
             }
             _ => {}
         }

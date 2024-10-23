@@ -61,7 +61,8 @@ use error_handling::handle_startup_errors;
 use renderer::{cursor_renderer::CursorSettings, RendererSettings};
 use running_tracker::RunningTracker;
 use window::{
-    create_event_loop, determine_window_size, UpdateLoop, UserEvent, WindowSettings, WindowSize,
+    create_event_loop, determine_window_size, EventPayload, UpdateLoop, UserEvent, WindowSettings,
+    WindowSize,
 };
 
 pub use channel_utils::*;
@@ -135,7 +136,7 @@ fn main() -> ExitCode {
 }
 
 fn setup(
-    proxy: EventLoopProxy<UserEvent>,
+    proxy: EventLoopProxy<EventPayload>,
     running_tracker: RunningTracker,
     settings: Arc<Settings>,
 ) -> Result<(WindowSize, Option<FontSettings>, NeovimRuntime)> {

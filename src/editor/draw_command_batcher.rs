@@ -1,8 +1,12 @@
 use std::cell::RefCell;
 
-use crate::{editor::DrawCommand, renderer::WindowDrawCommand, window::UserEvent};
+use crate::{
+    editor::DrawCommand,
+    renderer::WindowDrawCommand,
+    window::{EventPayload, UserEvent, WindowCommand},
+};
 
-use winit::event_loop::EventLoopProxy;
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 pub struct DrawCommandBatcher {
     batch: RefCell<Vec<DrawCommand>>,
@@ -19,7 +23,7 @@ impl DrawCommandBatcher {
         self.batch.borrow_mut().push(draw_command);
     }
 
-    pub fn send_batch(&self, proxy: &EventLoopProxy<UserEvent>) {
+    pub fn send_batch(&self, proxy: &EventLoopProxy<EventPayload>) {
         let mut batch: Vec<DrawCommand> = self.batch.borrow_mut().split_off(0);
         // Order the draw command batches such that window draw commands are handled first
         // by grid id, and then by the draw command such that they are positioned first.
@@ -34,6 +38,12 @@ impl DrawCommandBatcher {
             }
             _ => 200,
         });
-        proxy.send_event(batch.into()).ok();
+        // proxy.send_event(batch.into()).ok();
+        proxy
+            .send_event(EventPayload::new(
+                UserEvent::DrawCommandBatch(batch),
+                WindowId::from(0),
+            ))
+            .ok();
     }
 }

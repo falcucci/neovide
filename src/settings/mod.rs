@@ -13,9 +13,12 @@ use std::{
     convert::TryInto,
     fmt::Debug,
 };
-use winit::event_loop::EventLoopProxy;
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
-use crate::{bridge::NeovimWriter, window::UserEvent};
+use crate::{
+    bridge::NeovimWriter,
+    window::{EventPayload, UserEvent},
+};
 pub use from_value::ParseFromValue;
 pub use window_size::{
     clamped_grid_size, load_last_window_settings, save_window_size, PersistentWindowSettings,
@@ -137,7 +140,7 @@ impl Settings {
     pub fn handle_setting_changed_notification(
         &self,
         arguments: Vec<Value>,
-        event_loop_proxy: &EventLoopProxy<UserEvent>,
+        event_loop_proxy: &EventLoopProxy<EventPayload>,
     ) {
         let mut arguments = arguments.into_iter();
         let (name, value) = (arguments.next().unwrap(), arguments.next().unwrap());
@@ -150,13 +153,14 @@ impl Settings {
             .read()
             .get(&SettingLocation::NeovideGlobal(name))
             .unwrap()(self, value);
-        let _ = event_loop_proxy.send_event(event.into());
+        // let _ = event_loop_proxy.send_event(event.into());
+        let _ = event_loop_proxy.send_event(EventPayload::new(event.into(), WindowId::from(0)));
     }
 
     pub fn handle_option_changed_notification(
         &self,
         arguments: Vec<Value>,
-        event_loop_proxy: &EventLoopProxy<UserEvent>,
+        event_loop_proxy: &EventLoopProxy<EventPayload>,
     ) {
         let mut arguments = arguments.into_iter();
         let (name, value) = (arguments.next().unwrap(), arguments.next().unwrap());
@@ -170,7 +174,8 @@ impl Settings {
             .get(&SettingLocation::NeovimOption(name))
             .unwrap()(self, value);
 
-        let _ = event_loop_proxy.send_event(event.into());
+        // let _ = event_loop_proxy.send_event(event.into());
+        let _ = event_loop_proxy.send_event(EventPayload::new(event.into(), WindowId::from(0)));
     }
 
     pub fn register<T: SettingGroup>(&self) {

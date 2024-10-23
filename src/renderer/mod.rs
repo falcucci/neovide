@@ -36,7 +36,7 @@ use crate::{
     renderer::rendered_layer::{group_windows, FloatingLayer},
     settings::*,
     units::{to_skia_rect, GridPos, GridRect, GridSize, PixelPos},
-    window::{ShouldRender, UserEvent},
+    window::{EventPayload, ShouldRender, UserEvent},
     WindowSettings,
 };
 
@@ -545,7 +545,7 @@ pub trait SkiaRenderer {
     fn swap_buffers(&mut self);
     fn canvas(&mut self) -> &Canvas;
     fn resize(&mut self);
-    fn create_vsync(&self, proxy: EventLoopProxy<UserEvent>) -> VSync;
+    fn create_vsync(&self, proxy: EventLoopProxy<EventPayload>) -> VSync;
     #[cfg(feature = "gpu_profiling")]
     fn tracy_create_gpu_context(&self, name: &str) -> Box<dyn GpuCtx>;
 }

@@ -16,7 +16,7 @@ use crate::windows_attach_to_console;
 use crate::{
     bridge::{send_ui, ParallelCommand},
     settings::Settings,
-    window::{show_error_window, UserEvent},
+    window::{show_error_window, EventPayload, UserEvent},
 };
 
 fn show_error(explanation: &str) -> ! {
@@ -69,7 +69,7 @@ This is the error that caused the crash. In case you don't know what to do with 
 
 pub fn handle_startup_errors(
     err: Error,
-    event_loop: EventLoop<UserEvent>,
+    event_loop: EventLoop<EventPayload>,
     settings: Arc<Settings>,
 ) -> ExitCode {
     // Command line output is always printed to the stdout/stderr

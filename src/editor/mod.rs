@@ -9,7 +9,7 @@ use std::{collections::HashMap, rc::Rc, sync::Arc, thread};
 use log::{error, trace, warn};
 use tokio::sync::mpsc::unbounded_channel;
 
-use winit::event_loop::EventLoopProxy;
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 #[cfg(target_os = "macos")]
 use winit::window::Theme;
@@ -23,7 +23,7 @@ use crate::{
     renderer::{DrawCommand, WindowDrawCommand},
     running_tracker::RunningTracker,
     settings::Settings,
-    window::{UserEvent, WindowCommand},
+    window::{EventPayload, UserEvent, WindowCommand},
 };
 
 #[cfg(target_os = "macos")]
@@ -94,14 +94,14 @@ pub struct Editor {
     pub draw_command_batcher: Rc<DrawCommandBatcher>,
     pub current_mode_index: Option<u64>,
     pub ui_ready: bool,
-    event_loop_proxy: EventLoopProxy<UserEvent>,
+    event_loop_proxy: EventLoopProxy<EventPayload>,
     #[allow(dead_code)]
     settings: Arc<Settings>,
     composition_order: u64,
 }
 
 impl Editor {
-    pub fn new(event_loop_proxy: EventLoopProxy<UserEvent>, settings: Arc<Settings>) -> Self {
+    pub fn new(event_loop_proxy: EventLoopProxy<EventPayload>, settings: Arc<Settings>) -> Self {
         Editor {
             windows: HashMap::new(),
             cursor: Cursor::new(),
@@ -125,7 +125,11 @@ impl Editor {
                 }
                 let _ = self
                     .event_loop_proxy
-                    .send_event(WindowCommand::TitleChanged(title).into());
+                    // .send_event(WindowCommand::TitleChanged(title).into());
+                    .send_event(EventPayload::new(
+                        UserEvent::WindowCommand(WindowCommand::TitleChanged(title)),
+                        WindowId::from(0),
+                    ));
             }
             RedrawEvent::ModeInfoSet { cursor_modes } => {
                 tracy_zone!("EditorModeInfoSet");
@@ -153,15 +157,17 @@ impl Editor {
             }
             RedrawEvent::MouseOn => {
                 tracy_zone!("EditorMouseOn");
-                let _ = self
-                    .event_loop_proxy
-                    .send_event(WindowCommand::SetMouseEnabled(true).into());
+                let _ = self.event_loop_proxy.send_event(EventPayload::new(
+                    UserEvent::WindowCommand(WindowCommand::SetMouseEnabled(true)),
+                    WindowId::from(0),
+                ));
             }
             RedrawEvent::MouseOff => {
                 tracy_zone!("EditorMouseOff");
-                let _ = self
-                    .event_loop_proxy
-                    .send_event(WindowCommand::SetMouseEnabled(false).into());
+                let _ = self.event_loop_proxy.send_event(EventPayload::new(
+                    UserEvent::WindowCommand(WindowCommand::SetMouseEnabled(false)),
+                    WindowId::from(0),
+                ));
             }
             RedrawEvent::BusyStart => {
                 tracy_zone!("EditorBusyStart");
@@ -189,10 +195,12 @@ impl Editor {
                 // Set the dark/light theme of window, so the titlebar text gets correct color.
                 #[cfg(target_os = "macos")]
                 if self.settings.get::<CmdLineSettings>().frame == Frame::Transparent {
-                    let _ = self.event_loop_proxy.send_event(
-                        WindowCommand::ThemeChanged(window_theme_for_background(colors.background))
-                            .into(),
-                    );
+                    let _ = self.event_loop_proxy.send_event(EventPayload::new(
+                        UserEvent::WindowCommand(WindowCommand::ThemeChanged(
+                            window_theme_for_background(colors.background),
+                        )),
+                        WindowId::from(0),
+                    ));
                 }
 
                 self.draw_command_batcher
@@ -347,9 +355,10 @@ impl Editor {
             }
             // Interpreting suspend as a window minimize request
             RedrawEvent::Suspend => {
-                let _ = self
-                    .event_loop_proxy
-                    .send_event(WindowCommand::Minimize.into());
+                let _ = self.event_loop_proxy.send_event(EventPayload::new(
+                    UserEvent::WindowCommand(WindowCommand::Minimize),
+                    WindowId::from(0),
+                ));
             }
             _ => {}
         };
@@ -607,9 +616,10 @@ impl Editor {
         match gui_option {
             GuiOption::GuiFont(guifont) => {
                 if guifont == *"*" {
-                    let _ = self
-                        .event_loop_proxy
-                        .send_event(WindowCommand::ListAvailableFonts.into());
+                    let _ = self.event_loop_proxy.send_event(EventPayload::new(
+                        UserEvent::WindowCommand(WindowCommand::ListAvailableFonts),
+                        WindowId::from(0),
+                    ));
                 } else {
                     self.draw_command_batcher
                         .queue(DrawCommand::FontChanged(guifont));
@@ -642,7 +652,7 @@ impl Editor {
 }
 
 pub fn start_editor(
-    event_loop_proxy: EventLoopProxy<UserEvent>,
+    event_loop_proxy: EventLoopProxy<EventPayload>,
     running_tracker: RunningTracker,
     settings: Arc<Settings>,
 ) -> NeovimHandler {
