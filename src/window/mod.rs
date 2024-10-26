@@ -1,8 +1,8 @@
+pub mod application;
 mod error_window;
 mod keyboard_manager;
 mod mouse_manager;
 mod settings;
-mod update_loop;
 mod window_wrapper;
 
 #[cfg(target_os = "macos")]
@@ -47,10 +47,9 @@ use crate::{
     },
     units::GridSize,
 };
+pub use application::ShouldRender;
 pub use error_window::show_error_window;
 pub use settings::{WindowSettings, WindowSettingsChanged};
-pub use update_loop::ShouldRender;
-pub use update_loop::UpdateLoop;
 pub use window_wrapper::WinitWindowWrapper;
 
 static ICON: &[u8] = include_bytes!("../../assets/neovide.ico");

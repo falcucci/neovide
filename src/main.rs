@@ -61,8 +61,8 @@ use error_handling::handle_startup_errors;
 use renderer::{cursor_renderer::CursorSettings, RendererSettings};
 use running_tracker::RunningTracker;
 use window::{
-    create_event_loop, determine_window_size, EventPayload, UpdateLoop, UserEvent, WindowSettings,
-    WindowSize,
+    application::Application, create_event_loop, determine_window_size, EventPayload, UserEvent,
+    WindowSettings, WindowSize,
 };
 
 pub use channel_utils::*;
@@ -110,14 +110,14 @@ fn main() -> ExitCode {
     ) {
         Err(err) => handle_startup_errors(err, event_loop, settings.clone()),
         Ok((window_size, font_settings, runtime)) => {
-            let mut update_loop = UpdateLoop::new(
+            let mut app = Application::new(
                 window_size,
                 font_settings,
                 event_loop.create_proxy(),
                 settings.clone(),
             );
 
-            let result = event_loop.run_app(&mut update_loop);
+            let result = event_loop.run_app(&mut app);
 
             // Wait a little bit more and force Nevoim to exit after that.
             // This should not be required, but Neovim through libuv spawns childprocesses that inherits all the handles

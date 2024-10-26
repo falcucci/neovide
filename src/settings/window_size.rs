@@ -75,8 +75,8 @@ pub fn save_window_size(window_wrapper: &WinitWindowWrapper, settings: &Settings
         return;
     }
 
-    let skia_renderer = window_wrapper.routes.get(&WindowId::from(0)).unwrap();
-    let window = skia_renderer.borrow_mut().window();
+    let route = window_wrapper.routes.get(&WindowId::from(0)).unwrap();
+    let window = route.window.skia_renderer.borrow_mut().window();
     // let window = window_wrapper.skia_renderer.as_ref().unwrap().window();
     // Don't save the window size when the window is minimized, since the size can be 0
     // Note wayland can't determine this
