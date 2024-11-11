@@ -184,6 +184,7 @@ fn watcher_thread(init_config: Config, event_loop_proxy: EventLoopProxy<EventPay
 
         // notify if font changed
         if config.font != previous_config.font {
+            println!("Font changed, sending event");
             event_loop_proxy
                 // .send_event(UserEvent::ConfigsChanged(Box::new(HotReloadConfigs::Font(
                 //     config.font.clone(),

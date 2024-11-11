@@ -16,6 +16,7 @@ use super::macos_display_link::{
 };
 
 struct VSyncMacosDisplayLinkUserData {
+    window_id: WindowId,
     proxy: EventLoopProxy<EventPayload>,
     redraw_requested: Arc<AtomicBool>,
 }
@@ -27,7 +28,7 @@ fn vsync_macos_display_link_callback(
     if user_data.redraw_requested.swap(false, Ordering::Relaxed) {
         let _ = user_data.proxy.send_event(EventPayload::new(
             UserEvent::RedrawRequested,
-            WindowId::from(0),
+            user_data.window_id,
         ));
     }
 }
@@ -56,11 +57,11 @@ impl VSyncMacosDisplayLink {
 
     fn create_display_link(&mut self, window: &Window) {
         self.old_display = get_display_id_of_window(window);
-
         let display_link = match MacosDisplayLink::new_from_display(
             self.old_display,
             vsync_macos_display_link_callback,
             VSyncMacosDisplayLinkUserData {
+                window_id: window.id(),
                 proxy: self.proxy.clone(),
                 redraw_requested: Arc::clone(&self.redraw_requested),
             },

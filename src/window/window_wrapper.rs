@@ -59,7 +59,7 @@ pub fn set_background(background: &str) {
 }
 
 #[derive(PartialEq, PartialOrd)]
-enum UIState {
+pub enum UIState {
     Initing, // Running init.vim/lua
     WaitingForWindowCreate,
     FirstFrame,
@@ -150,7 +150,8 @@ impl WinitWindowWrapper {
     }
 
     pub fn set_fullscreen(&mut self, fullscreen: bool) {
-        if let Some(route) = &self.routes.get(&WindowId::from(0)) {
+        let window_id = *self.routes.keys().next().unwrap();
+        if let Some(route) = &self.routes.get(&window_id) {
             let window = route.window.skia_renderer.borrow_mut().window();
             if fullscreen {
                 let handle = window.current_monitor();
@@ -374,6 +375,7 @@ impl WinitWindowWrapper {
             &route.window.renderer,
             &route.window.winit_window,
         );
+
         route.window.keyboard_manager.handle_event(&event);
         route.window.renderer.handle_event(&event);
         let mut should_render = true;
@@ -471,16 +473,21 @@ impl WinitWindowWrapper {
             route.window.font_changed_last_frame = false;
             route.window.renderer.prepare_lines(true);
         }
+
         route
             .window
             .renderer
             .draw_frame(route.window.skia_renderer.borrow_mut().canvas(), dt);
+
         route.window.skia_renderer.borrow_mut().flush();
+
         {
             tracy_gpu_zone!("wait for vsync");
             vsync.wait_for_vsync();
         }
+
         route.window.skia_renderer.borrow_mut().swap_buffers();
+
         if route.window.ui_state == UIState::FirstFrame {
             route
                 .window
@@ -497,17 +504,14 @@ impl WinitWindowWrapper {
     pub fn animate_frame(&mut self, dt: f32) -> bool {
         tracy_zone!("animate_frame", 0);
         let grid_rect = self.get_grid_rect_from_window(GridSize::default());
-        let mut iter = self.routes.iter_mut();
-        if let Some((_, route)) = iter.next() {
-            let res = route.window.renderer.animate_frame(&grid_rect, dt);
-            tracy_plot!("animate_frame", res as u8 as f64);
+        let window_id = *self.routes.keys().next().unwrap();
+        let route = self.routes.get_mut(&window_id).unwrap();
+        let res = route.window.renderer.animate_frame(&grid_rect, dt);
+        tracy_plot!("animate_frame", res as u8 as f64);
 
-            route.window.renderer.prepare_lines(false);
-            #[allow(clippy::let_and_return)]
-            return res;
-        }
-
-        false
+        route.window.renderer.prepare_lines(false);
+        #[allow(clippy::let_and_return)]
+        res
     }
 
     pub fn try_create_window(
@@ -654,7 +658,7 @@ impl WinitWindowWrapper {
             window.request_redraw();
         }
 
-        let mut route = Route {
+        let route = Route {
             window: RouteWindow {
                 previous_frame_start: Instant::now(),
                 last_dt: 0.0,
@@ -745,7 +749,7 @@ impl WinitWindowWrapper {
         let window_padding = self.calculate_window_padding();
         let padding_changed = window_padding != self.window_padding;
         if let Some(route) = self.routes.get_mut(&window_id) {
-            route.window.should_render = ShouldRender::Wait;
+            // route.window.should_render = ShouldRender::Wait;
             // Don't render until the UI is fully entered and the window is shown
             if route.window.ui_state < UIState::FirstFrame {
                 return ShouldRender::Wait;
@@ -754,7 +758,7 @@ impl WinitWindowWrapper {
             }
 
             // The skia renderer shuld always be created when this point is reached, since the < UIState::FirstFrame check will return true
-            let skia_renderer = route.window.skia_renderer.clone();
+            let skia_renderer = route.window.skia_renderer.as_ref();
             let resize_requested =
                 route.window.requested_columns.is_some() || route.window.requested_lines.is_some();
 
@@ -864,10 +868,14 @@ impl WinitWindowWrapper {
             route.window.saved_inner_size.height,
         ) - window_padding_size;
 
+        println!("content_size: {:?}", content_size);
+
         let grid_size = (content_size / route.window.renderer.grid_renderer.grid_scale)
             .floor()
             .try_cast()
             .unwrap();
+        println!("grid_size: {:?}", grid_size);
+        println!("min: {:?}", min);
 
         grid_size.max(min)
     }
@@ -940,7 +948,7 @@ impl WinitWindowWrapper {
         }
         let window_id = *self.routes.keys().next().unwrap();
         let route = self.routes.get_mut(&window_id).unwrap();
-        let skia_renderer = route.window.skia_renderer.clone();
+        let skia_renderer = route.window.skia_renderer.as_ref();
         #[cfg(target_os = "macos")]
         self.macos_feature
             .as_mut()
@@ -950,6 +958,7 @@ impl WinitWindowWrapper {
             .window
             .renderer
             .handle_os_scale_factor_change(scale_factor);
+
         skia_renderer.borrow_mut().resize();
     }
 }

@@ -23,7 +23,7 @@ impl DrawCommandBatcher {
         self.batch.borrow_mut().push(draw_command);
     }
 
-    pub fn send_batch(&self, proxy: &EventLoopProxy<EventPayload>) {
+    pub fn send_batch(&self, proxy: &EventLoopProxy<EventPayload>, window_id: u64) {
         let mut batch: Vec<DrawCommand> = self.batch.borrow_mut().split_off(0);
         // Order the draw command batches such that window draw commands are handled first
         // by grid id, and then by the draw command such that they are positioned first.
@@ -42,7 +42,7 @@ impl DrawCommandBatcher {
         proxy
             .send_event(EventPayload::new(
                 UserEvent::DrawCommandBatch(batch),
-                WindowId::from(0),
+                WindowId::from(window_id),
             ))
             .ok();
     }

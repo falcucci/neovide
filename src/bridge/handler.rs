@@ -23,7 +23,7 @@ use crate::{
 #[derive(Clone)]
 pub struct NeovimHandler {
     // The EventLoopProxy is not sync on all platforms, so wrap it in a mutex
-    proxy: Arc<Mutex<EventLoopProxy<EventPayload>>>,
+    pub proxy: Arc<Mutex<EventLoopProxy<EventPayload>>>,
     sender: LoggingSender<RedrawEvent>,
     running_tracker: RunningTracker,
     #[allow(dead_code)]

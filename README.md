@@ -9,7 +9,7 @@ aggressively refactored and updated Vim editor). Where possible there are some g
 improvements, but functionally it should act like the terminal UI.
 
 To checkout all the **cool features**, **installation instructions**, **configuration settings** and
-much more, head on over to [neovide.dev](https://neovide.dev).
+much more, head on over to [neovide.dev](https://neovithisthde.dev).
 
 <br>
 

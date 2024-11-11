@@ -75,7 +75,8 @@ pub fn save_window_size(window_wrapper: &WinitWindowWrapper, settings: &Settings
         return;
     }
 
-    let route = window_wrapper.routes.get(&WindowId::from(0)).unwrap();
+    let window_id = window_wrapper.routes.keys().next().unwrap();
+    let route = window_wrapper.routes.get(window_id).unwrap();
     let window = route.window.skia_renderer.borrow_mut().window();
     // let window = window_wrapper.skia_renderer.as_ref().unwrap().window();
     // Don't save the window size when the window is minimized, since the size can be 0

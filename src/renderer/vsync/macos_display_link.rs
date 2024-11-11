@@ -7,7 +7,7 @@ use self::core_video::CVReturn;
 use objc2::msg_send;
 use objc2_foundation::ns_string;
 
-use winit::window::Window;
+use winit::window::{Window, WindowId};
 
 // Display link api reference: https://developer.apple.com/documentation/corevideo/cvdisplaylink?language=objc
 #[allow(non_upper_case_globals, non_camel_case_types)]

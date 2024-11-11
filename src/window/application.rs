@@ -143,8 +143,8 @@ impl Application {
     }
 
     fn schedule_next_event(&mut self, event_loop: &ActiveEventLoop) {
-        #[cfg(feature = "profiling")]
-        self.should_render.plot_tracy();
+        // #[cfg(feature = "profiling")]
+        // self.should_render.plot_tracy();
         // if self.create_window_allowed {
         //     self.window_wrapper
         //         .try_create_window(event_loop, &self.proxy);
@@ -158,14 +158,15 @@ impl Application {
         }
 
         // Scope the mutable borrow of routes
-        let (_dt, should_render_immediately) = {
+        let should_render_immediately = {
             let window_id = *self.window_wrapper.routes.keys().next().unwrap();
             let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
             let vsync = route.window.vsync.as_ref().unwrap();
 
-            let dt = Duration::from_secs_f32(
-                vsync.get_refresh_rate(&route.window.winit_window, &self.settings),
-            );
+            let dt = Duration::from_secs_f32(vsync.get_refresh_rate(
+                &route.window.skia_renderer.as_ref().borrow().window(),
+                &self.settings,
+            ));
 
             let now = Instant::now();
             let target_animation_time = now - route.window.animation_start;
@@ -175,6 +176,8 @@ impl Application {
                 route.window.animation_time = Duration::ZERO;
                 delta = dt;
             }
+
+            // Catchup immediately if the delta is more than one frame, otherwise smooth it over 10 frames
             let catchup = if delta >= dt {
                 delta
             } else {
@@ -189,13 +192,14 @@ impl Application {
             let step = dt / num_steps;
 
             let mut should_render_immediately = false;
+            let animate_frame = self.window_wrapper.animate_frame(step.as_secs_f32());
             for _ in 0..num_steps {
-                if self.window_wrapper.animate_frame(step.as_secs_f32()) {
+                if animate_frame {
                     should_render_immediately = true;
                 }
             }
 
-            (dt, should_render_immediately)
+            should_render_immediately
         };
 
         // Update should_render status outside the mutable borrow scope
@@ -208,32 +212,34 @@ impl Application {
     }
 
     fn render(&mut self) {
+        println!("render");
         let window_id = *self.window_wrapper.routes.keys().next().unwrap();
 
         {
             let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
             route.window.pending_render = false;
+            tracy_plot!("pending_render", route.window.pending_render as u8 as f64);
+        }
 
+        {
+            let route = self.window_wrapper.routes.get(&window_id).unwrap();
+            self.window_wrapper.draw_frame(route.window.last_dt);
+        }
+
+        {
+            let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
             if let FocusedState::UnfocusedNotDrawn = route.window.focused {
                 route.window.focused = FocusedState::Unfocused;
             }
 
             route.window.num_consecutive_rendered += 1;
+            tracy_plot!(
+                "num_consecutive_rendered",
+                route.window.num_consecutive_rendered as f64
+            );
             route.window.last_dt = route.window.previous_frame_start.elapsed().as_secs_f32();
             route.window.previous_frame_start = Instant::now();
         }
-
-        // self.pending_render = false;
-        // tracy_plot!("pending_render", self.pending_render as u8 as f64);
-
-        let route = self.window_wrapper.routes.get(&window_id).unwrap();
-        self.window_wrapper.draw_frame(route.window.last_dt);
-
-        // self.num_consecutive_rendered += 1;
-        // tracy_plot!(
-        //     "num_consecutive_rendered",
-        //     self.num_consecutive_rendered as f64
-        // );
     }
 
     fn process_buffered_draw_commands(&mut self) {
@@ -270,7 +276,6 @@ impl Application {
             return;
         }
         let window_id = *self.window_wrapper.routes.keys().next().unwrap();
-        println!("{:?}", window_id);
         let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
         let window = route.window.winit_window.clone();
         let vsync = route.window.vsync.as_mut().unwrap();
@@ -292,54 +297,53 @@ impl Application {
     }
 
     fn prepare_and_animate(&mut self) {
+        let window_id = *self.window_wrapper.routes.keys().next().unwrap();
         let should_prepare = {
-            let window_id = *self.window_wrapper.routes.keys().next().unwrap();
             let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
 
             // Determine if we should prepare
             let skipped_frame = route.window.pending_render
                 && Instant::now() > (route.window.animation_start + route.window.animation_time);
-            let should_prepare = !route.window.pending_render || skipped_frame;
 
-            if !should_prepare {
-                route
-                    .window
-                    .renderer
-                    .grid_renderer
-                    .shaper
-                    .cleanup_font_cache();
-            }
-
-            should_prepare
+            !route.window.pending_render || skipped_frame
         };
 
-        if should_prepare {
-            // Now we can call prepare_frame without overlapping mutable borrows
-            let res = self.window_wrapper.prepare_frame();
-
-            let window_id = *self.window_wrapper.routes.keys().next().unwrap();
+        if !should_prepare {
             let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
-            route.window.should_render.update(res);
+            route
+                .window
+                .renderer
+                .grid_renderer
+                .shaper
+                .cleanup_font_cache();
+            return;
+        }
 
-            let skipped_frame = route.window.pending_render
-                && Instant::now() > (route.window.animation_start + route.window.animation_time);
-            let should_animate = route.window.should_render == ShouldRender::Immediately
-                || !self.idle
-                || skipped_frame;
+        // Now we can call prepare_frame without overlapping mutable borrows
+        let res = self.window_wrapper.prepare_frame();
 
-            if should_animate {
-                self.reset_animation_period();
-                self.animate();
-                self.schedule_render(skipped_frame);
-            } else {
-                route.window.num_consecutive_rendered = 0;
-                tracy_plot!(
-                    "num_consecutive_rendered",
-                    route.window.num_consecutive_rendered as f64
-                );
-                route.window.last_dt = route.window.previous_frame_start.elapsed().as_secs_f32();
-                route.window.previous_frame_start = Instant::now();
-            }
+        let window_id = *self.window_wrapper.routes.keys().next().unwrap();
+        let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
+        route.window.should_render.update(res);
+
+        let skipped_frame = route.window.pending_render
+            && Instant::now() > (route.window.animation_start + route.window.animation_time);
+        let should_animate =
+            route.window.should_render == ShouldRender::Immediately || !self.idle || skipped_frame;
+
+        println!("should_animate: {:?}", should_animate);
+        if should_animate {
+            self.reset_animation_period();
+            self.animate();
+            self.schedule_render(skipped_frame);
+        } else {
+            route.window.num_consecutive_rendered = 0;
+            tracy_plot!(
+                "num_consecutive_rendered",
+                route.window.num_consecutive_rendered as f64
+            );
+            route.window.last_dt = route.window.previous_frame_start.elapsed().as_secs_f32();
+            route.window.previous_frame_start = Instant::now();
         }
     }
 
