@@ -212,7 +212,6 @@ impl Application {
     }
 
     fn render(&mut self) {
-        println!("render");
         let window_id = *self.window_wrapper.routes.keys().next().unwrap();
 
         {
@@ -252,6 +251,10 @@ impl Application {
                 .drain(..)
                 .collect::<Vec<_>>()
         };
+
+        if pending_draw_commands.is_empty() {
+            return;
+        }
 
         for command in pending_draw_commands {
             self.window_wrapper.handle_draw_commands(command);
@@ -331,7 +334,6 @@ impl Application {
         let should_animate =
             route.window.should_render == ShouldRender::Immediately || !self.idle || skipped_frame;
 
-        println!("should_animate: {:?}", should_animate);
         if should_animate {
             self.reset_animation_period();
             self.animate();
@@ -351,6 +353,7 @@ impl Application {
         let window_id = *self.window_wrapper.routes.keys().next().unwrap();
         let route = self.window_wrapper.routes.get_mut(&window_id).unwrap();
         if route.window.pending_render {
+            println!("render (redraw requested)");
             tracy_zone!("render (redraw requested)");
             self.render();
             // We should process all buffered draw commands as soon as the rendering has finished

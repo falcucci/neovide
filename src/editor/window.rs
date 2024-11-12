@@ -16,7 +16,7 @@ pub enum WindowType {
 }
 
 pub struct Window {
-    grid_id: u64,
+    pub grid_id: u64,
     grid: CharacterGrid,
     pub window_type: WindowType,
 

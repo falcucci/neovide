@@ -117,7 +117,9 @@ impl Editor {
     }
 
     pub fn handle_redraw_event(&mut self, event: RedrawEvent) {
-        let window_id = *self.windows.keys().next().unwrap_or(&0);
+        println!("handle_redraw_event {:?}", event);
+        // let window_id = *self.windows.keys().next().unwrap_or(&0);
+        let window_id = 0;
         match event {
             RedrawEvent::SetTitle { mut title } => {
                 tracy_zone!("EditorSetTitle");
@@ -157,7 +159,6 @@ impl Editor {
                     .queue(DrawCommand::ModeChanged(mode));
             }
             RedrawEvent::MouseOn => {
-                println!("MouseOn event received");
                 let window_id = *self.windows.keys().next().unwrap();
                 tracy_zone!("EditorMouseOn");
                 let _ = self.event_loop_proxy.send_event(EventPayload::new(
@@ -166,7 +167,6 @@ impl Editor {
                 ));
             }
             RedrawEvent::MouseOff => {
-                println!("MouseOff event received");
                 tracy_zone!("EditorMouseOff");
                 let _ = self.event_loop_proxy.send_event(EventPayload::new(
                     UserEvent::WindowCommand(WindowCommand::SetMouseEnabled(false)),
@@ -187,7 +187,6 @@ impl Editor {
                 tracy_zone!("EditorFlush");
                 trace!("Image flushed");
                 tracy_named_frame!("neovim draw command flush");
-                println!("Image flushed");
                 self.send_cursor_info();
                 {
                     trace!("send_batch");
@@ -362,7 +361,6 @@ impl Editor {
             }
             // Interpreting suspend as a window minimize request
             RedrawEvent::Suspend => {
-                println!("Suspend event received");
                 let _ = self.event_loop_proxy.send_event(EventPayload::new(
                     UserEvent::WindowCommand(WindowCommand::Minimize),
                     WindowId::from(0),

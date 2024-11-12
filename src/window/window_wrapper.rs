@@ -868,14 +868,10 @@ impl WinitWindowWrapper {
             route.window.saved_inner_size.height,
         ) - window_padding_size;
 
-        println!("content_size: {:?}", content_size);
-
         let grid_size = (content_size / route.window.renderer.grid_renderer.grid_scale)
             .floor()
             .try_cast()
             .unwrap();
-        println!("grid_size: {:?}", grid_size);
-        println!("min: {:?}", min);
 
         grid_size.max(min)
     }
