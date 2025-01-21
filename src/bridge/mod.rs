@@ -35,6 +35,7 @@ pub use session::NeovimWriter;
 pub use ui_commands::{send_ui, start_ui_command_handler, ParallelCommand, SerialCommand};
 
 const NEOVIM_REQUIRED_VERSION: &str = "0.10.0";
+const INIT_TERM_LUA: &str = include_str!("../../lua/term.lua");
 
 pub struct NeovimRuntime {
     pub runtime: Runtime,
@@ -131,6 +132,14 @@ async fn launch(
         .ui_attach(grid_size.width as i64, grid_size.height as i64, &options)
         .await
         .context("Could not attach ui to neovim process");
+
+    if settings.get::<CmdLineSettings>().terminal {
+        session
+            .neovim
+            .execute_lua(INIT_TERM_LUA, vec![])
+            .await
+            .context("Error when running Neovide term.lua")?;
+    }
 
     info!("Neovim process attached");
     res.map(|()| session)
