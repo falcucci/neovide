@@ -2,7 +2,7 @@ if vim.g.neovide then
   local cursor_vfx = { "railgun", "torpedo", "pixiedust", "sonicboom", "ripple", "wireframe" }
   math.randomseed(os.time())
 
-  vim.g.neovide_cursor_vfx_mode = cursor_vfx[math.random(1, #cursor_vfx)]
+  -- vim.g.neovide_cursor_vfx_mode = cursor_vfx[math.random(1, #cursor_vfx)]
 
   vim.keymap.set("n", "<F11>", function()
     vim.g.neovide_fullscreen = not vim.g.neovide_fullscreen
