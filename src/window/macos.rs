@@ -29,6 +29,9 @@ use super::{WindowSettings, WindowSettingsChanged};
 static NEOVIDE_ICON_PATH: &[u8] =
     include_bytes!("../../extra/osx/Neovide.app/Contents/resources/Neovide.icns");
 
+static NEOTTY_ICON_PATH: &[u8] =
+    include_bytes!("../../extra/osx/Neovide.app/Contents/resources/Neotty.icns");
+
 #[derive(Clone)]
 struct TitlebarClickHandlerIvars {}
 
@@ -87,6 +90,20 @@ pub fn load_neovide_icon() -> Option<Retained<NSImage>> {
         let data = NSData::dataWithBytes_length(
             NEOVIDE_ICON_PATH.as_ptr() as *mut c_void,
             NEOVIDE_ICON_PATH.len(),
+        );
+
+        let icon_image: Option<Retained<NSImage>> =
+            NSImage::initWithData(NSImage::alloc(), data.as_ref());
+
+        icon_image
+    }
+}
+
+pub fn load_neotty_icon() -> Option<Retained<NSImage>> {
+    unsafe {
+        let data = NSData::dataWithBytes_length(
+            NEOTTY_ICON_PATH.as_ptr() as *mut c_void,
+            NEOTTY_ICON_PATH.len(),
         );
 
         let icon_image: Option<Retained<NSImage>> =
@@ -326,7 +343,11 @@ impl MacosWindowFeature {
             app.activateIgnoringOtherApps(true);
 
             // Make sure the icon is loaded when launched from terminal
-            let icon = load_neovide_icon();
+            let terminal_mode = self.settings.get::<CmdLineSettings>().terminal;
+            let icon = terminal_mode
+                .then(|| load_neotty_icon())
+                .unwrap_or_else(|| load_neovide_icon());
+
             let icon_ref: Option<&NSImage> = icon.as_ref().map(|img| img.as_ref());
             unsafe { app.setApplicationIconImage(icon_ref) }
         }

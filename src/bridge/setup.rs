@@ -31,6 +31,11 @@ pub async fn setup_neovide_specific_state(
         .await
         .context("Could not communicate with neovim process")?;
 
+    // Set variable indicating to user config that neovide is being used in terminal mode.
+    nvim.set_var("neovide_terminal_mode", Value::Boolean(true))
+        .await
+        .context("Could not communicate with neovim process")?;
+
     nvim.command("runtime! ginit.vim")
         .await
         .context("Error encountered in ginit.vim ")?;

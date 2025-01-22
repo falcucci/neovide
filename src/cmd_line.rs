@@ -150,6 +150,10 @@ pub struct CmdLineSettings {
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     #[arg(long = "opengl", env = "NEOVIDE_OPENGL", action = ArgAction::SetTrue, value_parser = FalseyValueParser::new())]
     pub opengl: bool,
+
+    /// Force software rendering on Windows or macOS
+    #[arg(long = "terminal", env = "NEOVIDE_TERMINAL", action = ArgAction::SetTrue, value_parser = FalseyValueParser::new())]
+    pub terminal: bool,
 }
 
 // geometry, size and maximized are mutually exclusive
