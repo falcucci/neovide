@@ -18,6 +18,8 @@ if vim.g.neovide then
   vim.g.neovide_hide_mouse_when_typing = true
   vim.g.neovide_confirm_quit = true
   vim.g.neovide_floating_corner_radius = 0.5
+  -- vim.g.neovide_position_animation_length = 0
+  -- vim.g.neovide_cursor_animation_length = 0.00
 
   -- vim.g.neovide_padding_top = 20
   -- vim.g.neovide_padding_bottom = 0
