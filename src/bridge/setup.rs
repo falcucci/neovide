@@ -22,6 +22,7 @@ pub async fn get_api_information(nvim: &Neovim<NeovimWriter>) -> Result<ApiInfor
 
 pub async fn setup_neovide_specific_state(
     nvim: &Neovim<NeovimWriter>,
+    terminal_mode: bool,
     should_handle_clipboard: bool,
     api_information: &ApiInformation,
     settings: &Settings,
@@ -32,7 +33,7 @@ pub async fn setup_neovide_specific_state(
         .context("Could not communicate with neovim process")?;
 
     // Set variable indicating to user config that neovide is being used in terminal mode.
-    nvim.set_var("neovide_terminal_mode", Value::Boolean(true))
+    nvim.set_var("neovide_terminal_mode", Value::Boolean(terminal_mode))
         .await
         .context("Could not communicate with neovim process")?;
 

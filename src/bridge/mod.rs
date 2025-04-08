@@ -109,6 +109,7 @@ async fn create_neovim_session(
     let cmdline_settings = settings.get::<CmdLineSettings>();
 
     let should_handle_clipboard = cmdline_settings.wsl || cmdline_settings.server.is_some();
+    let terminal_mode = cmdline_settings.terminal;
     let api_information = get_api_information(&session.neovim).await?;
     info!(
         "Neovide registered to nvim with channel id {}",
@@ -118,6 +119,7 @@ async fn create_neovim_session(
     // log::info!("Api information {:#?}", api_information);
     setup_neovide_specific_state(
         &session.neovim,
+        terminal_mode,
         should_handle_clipboard,
         &api_information,
         &settings,
