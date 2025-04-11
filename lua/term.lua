@@ -8,5 +8,5 @@ if vim.g.neovide_terminal_mode then
     terminal
     startinsert
     autocmd BufLeave term://* quit
-]])
+  ]])
 end
