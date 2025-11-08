@@ -43,6 +43,8 @@ jobs:
   build_and_upload:
     name: Build and Upload
     needs: create_release
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
