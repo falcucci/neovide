@@ -210,7 +210,7 @@ jobs:
 
   publish_release:
     name: Publish Release
-    needs: build_and_upload
+    needs: [create_release, build_and_upload]
     runs-on: ubuntu-latest
     permissions:
       contents: write
