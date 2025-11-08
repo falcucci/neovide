@@ -17,6 +17,7 @@ jobs:
       contents: write
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
     steps:
       - uses: actions/checkout@v4
       - name: Delete old release
@@ -219,14 +220,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { data: release } = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: 'nightly'
-            });
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: release.id,
+              release_id: ${{ needs.create_release.outputs.release_id }},
               draft: false
             });
