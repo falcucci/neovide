@@ -134,7 +134,7 @@ jobs:
       - name: Prepare Artifacts (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          echo "ARTIFACT_NAME=neovide-windows-x86_64.msi" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=neovide.msi" >> $GITHUB_ENV
           echo "ARTIFACT_PATH=target/release/neovide.msi" >> $GITHUB_ENV
 
       - name: Prepare Artifacts (macOS)
@@ -147,9 +147,9 @@ jobs:
           # create .dmg for aarch64-apple-darwin
           GENERATE_BUNDLE_APP=false GENERATE_DMG=true ./macos-builder/run aarch64-apple-darwin
 
-          echo "ARTIFACT_NAME=neovide-macos-x86_64.dmg" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=Neovide-x86_64-apple-darwin.dmg" >> $GITHUB_ENV
           echo "ARTIFACT_PATH=target/x86_64-apple-darwin/release/bundle/osx/Neovide-x86_64-apple-darwin.dmg" >> $GITHUB_ENV
-          echo "ARTIFACT_NAME_ARM=neovide-macos-aarch64.dmg" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME_ARM=Neovide-aarch64-apple-darwin.dmg" >> $GITHUB_ENV
           echo "ARTIFACT_PATH_ARM=target/aarch64-apple-darwin/release/bundle/osx/Neovide-aarch64-apple-darwin.dmg" >> $GITHUB_ENV
 
       - name: Prepare Artifacts (Linux)
@@ -172,7 +172,7 @@ jobs:
             --output=appimage
           echo "ARTIFACT_NAME=neovide-linux-x86_64.tar.gz" >> $GITHUB_ENV
           echo "ARTIFACT_PATH=target/release/neovide-linux-x86_64.tar.gz" >> $GITHUB_ENV
-          echo "ARTIFACT_NAME_APPIMAGE=neovide-linux-x86_64.AppImage" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME_APPIMAGE=neovide.AppImage" >> $GITHUB_ENV
           echo "ARTIFACT_PATH_APPIMAGE=target/release/neovide.AppImage" >> $GITHUB_ENV
 
       - name: Upload Release Asset
@@ -211,6 +211,8 @@ jobs:
     name: Publish Release
     needs: build_and_upload
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Publish Release
         uses: actions/github-script@v6
