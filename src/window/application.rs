@@ -419,7 +419,7 @@ impl Application {
         // There's really no point in trying to render if the frame is skipped
         // (most likely due to the compositor being busy). The animated frame will
         // be rendered at an appropriate time anyway.
-        if self.window_wrapper.routes.is_empty() && !skipped_frame {
+        if skipped_frame || self.window_wrapper.routes.is_empty() {
             return;
         }
 
